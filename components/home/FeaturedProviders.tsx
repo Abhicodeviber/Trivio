@@ -102,7 +102,7 @@ export default function FeaturedProviders() {
                         {(s.tags ?? []).slice(0, 3).map(t => <span key={t} className="ptag">{t}</span>)}
                       </div>
                       <div className="provider-footer">
-                        <span className="price">From ${s.price}/{s.priceType === 'hourly' ? 'hr' : s.priceType === 'daily' ? 'day' : 'fixed'}</span>
+                        <span className="price">From ${s.price}/{s.priceType === 'hourly' ? 'hr' : s.priceType === 'negotiable' ? 'neg.' : 'fixed'}</span>
                         <button className="btn btn-sm btn-primary">View Details</button>
                       </div>
                     </div>

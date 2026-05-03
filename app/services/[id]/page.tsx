@@ -223,7 +223,7 @@ export default function ServiceDetailPage() {
     </>
   );
 
-  const priceLabel = service.priceType === 'hourly' ? '/hr' : service.priceType === 'daily' ? '/day' : ' fixed';
+  const priceLabel = service.priceType === 'hourly' ? '/hr' : service.priceType === 'negotiable' ? ' (negotiable)' : ' fixed';
 
   return (
     <>

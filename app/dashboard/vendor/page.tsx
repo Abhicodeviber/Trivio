@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import ProductManager from '@/components/vendor/ProductManager';
 
@@ -297,7 +298,11 @@ export default function VendorDashboard() {
             {SECTIONS.find(s => s.key === section)?.icon} {SECTIONS.find(s => s.key === section)?.label}
           </h1>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <span style={{ fontSize: 13, color: 'var(--text-light)' }}>Welcome, {displayName}</span>
+            <Link href={`/shops/${user._id}`} target="_blank">
+              <button className="btn btn-sm" style={{ background:'linear-gradient(135deg,#14532d,#16a34a)', color:'#fff', border:'none' }}>
+                🏪 View My Shop
+              </button>
+            </Link>
           </div>
         </div>
 

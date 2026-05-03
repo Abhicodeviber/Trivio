@@ -226,8 +226,8 @@ export default function ProductDetailPage() {
                 {product.vendor.rating > 0 && (
                   <p style={{ fontSize: 13, margin: 0 }}>⭐ {product.vendor.rating.toFixed(1)} · {product.vendor.reviewCount} reviews</p>
                 )}
-                <Link href={`/vendors/${product.vendor._id}`} style={{ fontSize: 13, color: 'var(--primary)', marginTop: 8, display: 'inline-block' }}>
-                  View all products from this shop →
+                <Link href={`/shops/${product.vendor._id}`} style={{ fontSize: 13, color: '#16a34a', marginTop: 8, display: 'inline-block' }}>
+                  Visit Shop →
                 </Link>
               </div>
             )}

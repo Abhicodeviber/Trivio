@@ -6,6 +6,8 @@ import TrustStrip from '@/components/home/TrustStrip';
 import Categories from '@/components/home/Categories';
 import HowItWorks from '@/components/home/HowItWorks';
 import FeaturedProviders from '@/components/home/FeaturedProviders';
+import FeaturedVendors from '@/components/home/FeaturedVendors';
+import PromoSlider from '@/components/home/PromoSlider';
 import CtaSection from '@/components/home/CtaSection';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 import { useCounters } from '@/hooks/useCounters';
@@ -25,8 +27,10 @@ export default function HomePage() {
         <Hero />
         <TrustStrip />
         <Categories />
+        <PromoSlider />
         <HowItWorks />
         <FeaturedProviders />
+        <FeaturedVendors />
         <CtaSection />
       </main>
       <Footer />

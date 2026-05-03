@@ -176,7 +176,7 @@ export default function ShopPage() {
   const [search,  setSearch]  = useState(searchParams.get('q') ?? '');
   const [category,setCategory]= useState(searchParams.get('cat') ?? '');
   const [sort,    setSort]    = useState(searchParams.get('sort') ?? 'createdAt');
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   /* Load vendor */
   useEffect(() => {

@@ -48,7 +48,7 @@ export default function ProductsPage() {
 
   const [searchInput, setSearchInput]   = useState(search);
   const [maxPriceInput, setMaxPriceInput] = useState(maxPrice);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const pushParams = useCallback((updates: Record<string, string>) => {
     const p = new URLSearchParams(searchParams.toString());

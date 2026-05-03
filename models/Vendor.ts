@@ -49,14 +49,14 @@ VendorSchema.methods.comparePassword = function (candidate: string) {
 
 VendorSchema.set('toJSON', {
   transform(_doc, ret) {
-    delete ret.password;
-    return ret;
+    const { password: _pw, ...safe } = ret;
+    return safe;
   },
 });
 
 // Clear cached model so hot-reload picks up schema changes
 if (mongoose.models.Vendor) {
-  delete (mongoose.models as Record<string, unknown>).Vendor;
+  Reflect.deleteProperty(mongoose.models, 'Vendor');
 }
 
 const Vendor: Model<IVendor> = mongoose.model<IVendor>('Vendor', VendorSchema);

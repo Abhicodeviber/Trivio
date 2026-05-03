@@ -50,7 +50,7 @@ ServiceSchema.index({ isActive: 1, createdAt: -1 });
 
 // Always rebuild the model in development so schema changes take effect after hot reload
 if (mongoose.models.Service) {
-  delete (mongoose.models as Record<string, unknown>).Service;
+  Reflect.deleteProperty(mongoose.models, 'Service');
 }
 const Service: Model<IService> = mongoose.model<IService>('Service', ServiceSchema);
 export default Service;

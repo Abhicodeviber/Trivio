@@ -22,7 +22,7 @@ VendorLeadSchema.index({ vendorId: 1, createdAt: -1 });
 VendorLeadSchema.index({ productId: 1 });
 
 if (mongoose.models.VendorLead) {
-  delete (mongoose.models as Record<string, unknown>).VendorLead;
+  Reflect.deleteProperty(mongoose.models, 'VendorLead');
 }
 
 const VendorLead: Model<IVendorLead> = mongoose.model<IVendorLead>('VendorLead', VendorLeadSchema);

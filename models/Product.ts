@@ -36,7 +36,7 @@ ProductSchema.index({ vendor: 1, inStock: 1 });
 ProductSchema.index({ inStock: 1, createdAt: -1 });
 
 if (mongoose.models.Product) {
-  delete (mongoose.models as Record<string, unknown>).Product;
+  Reflect.deleteProperty(mongoose.models, 'Product');
 }
 
 const Product: Model<IProduct> = mongoose.model<IProduct>('Product', ProductSchema);

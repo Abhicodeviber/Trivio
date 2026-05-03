@@ -24,7 +24,7 @@ LeadSchema.index({ service: 1, createdAt: -1 });
 LeadSchema.index({ provider: 1, createdAt: -1 });
 
 if (mongoose.models.Lead) {
-  delete (mongoose.models as Record<string, unknown>).Lead;
+  Reflect.deleteProperty(mongoose.models, 'Lead');
 }
 const Lead: Model<ILead> = mongoose.model<ILead>('Lead', LeadSchema);
 export default Lead;

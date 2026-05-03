@@ -106,8 +106,8 @@ export default function PromoSlider() {
   const [dir,     setDir]       = useState<'next' | 'prev'>('next');
   const [paused,  setPaused]    = useState(false);
   const [progress,setProgress]  = useState(0);
-  const timerRef  = useRef<ReturnType<typeof setInterval>>();
-  const progressRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef  = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const progressRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const INTERVAL = 5000;
 
   const go = useCallback((idx: number, direction: 'next' | 'prev') => {

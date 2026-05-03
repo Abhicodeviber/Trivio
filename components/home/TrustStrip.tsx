@@ -1,4 +1,15 @@
-const items = ['🔒 Verified Providers','⭐ 4.9 Average Rating','⚡ Fast Response','🛡️ Insured & Licensed','💬 24/7 Support','✅ Background Checked','🏆 Top Rated Pros','💰 Best Price Guarantee'];
+const items = [
+  '🏪 2,400+ Verified Shops',
+  '⭐ 4.9 Average Rating',
+  '📦 Free Product Listings',
+  '📋 Direct Customer Leads',
+  '🎯 Homepage Promotions',
+  '✅ Verified Vendor Badge',
+  '⚡ Go Live in 3 Minutes',
+  '💰 Zero Commission',
+  '🛡️ Secure Platform',
+  '🏆 Top Rated Vendors',
+];
 
 export default function TrustStrip() {
   const all = [...items, ...items];

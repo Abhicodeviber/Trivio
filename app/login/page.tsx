@@ -39,6 +39,7 @@ export default function LoginPage() {
       const user = await login(email.trim().toLowerCase(), password);
       if (user.role === 'admin')         router.push('/dashboard/admin');
       else if (user.role === 'provider') router.push('/dashboard/provider');
+      else if (user.role === 'vendor')   router.push('/dashboard/vendor');
       else                               router.push('/dashboard/customer');
     } catch (err: unknown) {
       setServerError((err as Error).message ?? 'Login failed. Please try again.');

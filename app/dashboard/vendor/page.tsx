@@ -4,14 +4,20 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import ProductManager from '@/components/vendor/ProductManager';
+import PromotionManager from '@/components/promotions/PromotionManager';
+import MultiFileUpload from '@/components/ui/MultiFileUpload';
+import FileUpload from '@/components/ui/FileUpload';
+import ChatInbox from '@/components/chat/ChatInbox';
 
-type Section = 'overview' | 'products' | 'leads' | 'profile';
+type Section = 'overview' | 'products' | 'promotions' | 'leads' | 'messages' | 'profile';
 
 const SECTIONS: { key: Section; icon: string; label: string }[] = [
-  { key: 'overview',  icon: '🏪', label: 'Overview' },
-  { key: 'products',  icon: '📦', label: 'My Products' },
-  { key: 'leads',     icon: '📋', label: 'Leads' },
-  { key: 'profile',   icon: '⚙️',  label: 'Shop Settings' },
+  { key: 'overview',   icon: '🏪', label: 'Overview' },
+  { key: 'products',   icon: '📦', label: 'My Products' },
+  { key: 'promotions', icon: '🎯', label: 'Promotions' },
+  { key: 'leads',      icon: '📋', label: 'Leads' },
+  { key: 'messages',   icon: '💬', label: 'Messages' },
+  { key: 'profile',    icon: '⚙️',  label: 'Shop Settings' },
 ];
 
 interface Lead {
@@ -147,29 +153,59 @@ function LeadsSection() {
   );
 }
 
+type VendorUser = Record<string, unknown>;
+
 function ProfileSection() {
   const { user } = useAuth();
+  const u = user as unknown as VendorUser | null;
   const [form, setForm] = useState({
-    shopName: '', ownerName: '', phone: '', whatsapp: '', city: '', address: '', description: '', logo: '',
+    shopName: '', ownerName: '', phone: '', whatsapp: '', city: '', address: '',
+    description: '', logo: '', photos: [] as string[], youtube: '', instagram: '',
+    lat: '', lng: '',
   });
-  const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState('');
+  const [saving, setSaving]       = useState(false);
+  const [notice, setNotice]       = useState('');
+  const [gettingLoc, setGettingLoc] = useState(false);
+  const [locError, setLocError]   = useState('');
 
   useEffect(() => {
-    if (!user) return;
+    if (!u) return;
+    const loc = u.location as { coordinates?: [number, number] } | undefined;
     setForm({
-      shopName:    (user as unknown as Record<string, string>).shopName    ?? '',
-      ownerName:   (user as unknown as Record<string, string>).ownerName   ?? '',
-      phone:       user.phone        ?? '',
-      whatsapp:    (user as unknown as Record<string, string>).whatsapp    ?? '',
-      city:        user.city         ?? '',
-      address:     (user as unknown as Record<string, string>).address     ?? '',
-      description: user.description  ?? '',
-      logo:        user.logo         ?? '',
+      shopName:    String(u.shopName    ?? ''),
+      ownerName:   String(u.ownerName   ?? ''),
+      phone:       String(u.phone       ?? ''),
+      whatsapp:    String(u.whatsapp    ?? ''),
+      city:        String(u.city        ?? ''),
+      address:     String(u.address     ?? ''),
+      description: String(u.description ?? ''),
+      logo:        String(u.logo        ?? ''),
+      photos:      Array.isArray(u.photos) ? (u.photos as string[]) : [],
+      youtube:     String(u.youtube     ?? ''),
+      instagram:   String(u.instagram   ?? ''),
+      lat:         loc?.coordinates ? String(loc.coordinates[1]) : '',
+      lng:         loc?.coordinates ? String(loc.coordinates[0]) : '',
     });
   }, [user]);
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k: string, v: string | string[]) => setForm(f => ({ ...f, [k]: v }));
+
+  function handleGetLocation() {
+    if (!navigator.geolocation) { setLocError('Geolocation is not supported by your browser.'); return; }
+    setGettingLoc(true);
+    setLocError('');
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setForm(f => ({ ...f, lat: String(pos.coords.latitude.toFixed(6)), lng: String(pos.coords.longitude.toFixed(6)) }));
+        setGettingLoc(false);
+      },
+      err => {
+        setLocError(err.code === 1 ? 'Location permission denied. Please allow access and try again.' : 'Could not get location. Try again.');
+        setGettingLoc(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
 
   async function handleSave() {
     if (!user) return;
@@ -192,50 +228,159 @@ function ProfileSection() {
     <div>
       <h2 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 700 }}>Shop Settings</h2>
       {notice && <div style={{ padding: '10px 16px', borderRadius: 8, marginBottom: 16, background: '#d1fae5', color: '#065f46', fontSize: 14 }}>✓ {notice}</div>}
-      <div className="content-card">
-        <div className="form-row">
-          <div className="form-group">
-            <label>Shop Name</label>
-            <input type="text" className="form-input" value={form.shopName} onChange={e => set('shopName', e.target.value)} disabled={saving} />
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* Basic Info */}
+        <div className="content-card">
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: 'var(--dark)' }}>🏪 Basic Info</h3>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Shop Name</label>
+              <input type="text" className="form-input" value={form.shopName} onChange={e => set('shopName', e.target.value)} disabled={saving} />
+            </div>
+            <div className="form-group">
+              <label>Owner Name</label>
+              <input type="text" className="form-input" value={form.ownerName} onChange={e => set('ownerName', e.target.value)} disabled={saving} />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Phone</label>
+              <input type="tel" className="form-input" value={form.phone} onChange={e => set('phone', e.target.value)} disabled={saving} />
+            </div>
+            <div className="form-group">
+              <label>WhatsApp</label>
+              <input type="tel" className="form-input" value={form.whatsapp} onChange={e => set('whatsapp', e.target.value)} disabled={saving} />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>City</label>
+              <input type="text" className="form-input" value={form.city} onChange={e => set('city', e.target.value)} disabled={saving} />
+            </div>
+            <div className="form-group">
+              <label>Address</label>
+              <input type="text" className="form-input" value={form.address} onChange={e => set('address', e.target.value)} disabled={saving} />
+            </div>
           </div>
           <div className="form-group">
-            <label>Owner Name</label>
-            <input type="text" className="form-input" value={form.ownerName} onChange={e => set('ownerName', e.target.value)} disabled={saving} />
+            <label>Shop Description</label>
+            <textarea className="form-input form-textarea" value={form.description}
+              onChange={e => set('description', e.target.value)} disabled={saving} style={{ minHeight: 80 }} />
           </div>
         </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Phone</label>
-            <input type="tel" className="form-input" value={form.phone} onChange={e => set('phone', e.target.value)} disabled={saving} />
+
+        {/* Logo & Photos */}
+        <div className="content-card">
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: 'var(--dark)' }}>🖼️ Logo &amp; Shop Photos</h3>
+          <div className="form-group" style={{ marginBottom: 20 }}>
+            <FileUpload
+              label="Shop Logo"
+              fileType="image"
+              value={form.logo}
+              onUpload={r => set('logo', r.url)}
+              onRemove={() => set('logo', '')}
+              hint="Square image recommended · JPG, PNG, WebP"
+            />
           </div>
-          <div className="form-group">
-            <label>WhatsApp</label>
-            <input type="tel" className="form-input" value={form.whatsapp} onChange={e => set('whatsapp', e.target.value)} disabled={saving} />
+          <MultiFileUpload
+            label="Shop Photos (shown in gallery on your shop page)"
+            values={form.photos}
+            onChange={urls => set('photos', urls)}
+            max={10}
+          />
+          <p style={{ fontSize: 12, color: 'var(--text-light)', marginTop: 8 }}>
+            Add up to 10 photos of your shop, products or workspace. These appear in the gallery on your shop page.
+          </p>
+        </div>
+
+        {/* Social Links */}
+        <div className="content-card">
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: 'var(--dark)' }}>🔗 Social &amp; Channel Links</h3>
+          <div className="form-row">
+            <div className="form-group">
+              <label>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ background: '#ff0000', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>▶ YouTube</span>
+                  Channel URL
+                </span>
+              </label>
+              <input type="url" className="form-input" placeholder="https://youtube.com/@yourchannel"
+                value={form.youtube} onChange={e => set('youtube', e.target.value)} disabled={saving} />
+            </div>
+            <div className="form-group">
+              <label>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ background: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: 11, fontWeight: 700 }}>📷 Instagram</span>
+                  Profile URL
+                </span>
+              </label>
+              <input type="url" className="form-input" placeholder="https://instagram.com/yourshop"
+                value={form.instagram} onChange={e => set('instagram', e.target.value)} disabled={saving} />
+            </div>
           </div>
         </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label>City</label>
-            <input type="text" className="form-input" value={form.city} onChange={e => set('city', e.target.value)} disabled={saving} />
+
+        {/* Location */}
+        <div className="content-card">
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: 'var(--dark)' }}>📍 Shop Location</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-light)', marginBottom: 16 }}>
+            Save your shop's GPS location so customers can find nearby shops easily.
+          </p>
+
+          {/* Use Current Location button */}
+          <button
+            type="button"
+            onClick={handleGetLocation}
+            disabled={gettingLoc || saving}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: gettingLoc ? '#e2e8f0' : 'linear-gradient(135deg,#0ea5e9,#0284c7)',
+              color: gettingLoc ? 'var(--text-light)' : '#fff',
+              border: 'none', borderRadius: 8, padding: '9px 18px',
+              fontSize: 14, fontWeight: 600, cursor: gettingLoc ? 'not-allowed' : 'pointer',
+              marginBottom: 16, transition: 'opacity .2s',
+            }}>
+            {gettingLoc
+              ? <><span style={{ display:'inline-block', width:14, height:14, border:'2px solid #94a3b8', borderTopColor:'#475569', borderRadius:'50%', animation:'spin .7s linear infinite' }} /> Detecting…</>
+              : <>📍 Use Current Location</>}
+          </button>
+
+          {locError && (
+            <div style={{ background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:8, padding:'8px 12px', color:'#dc2626', fontSize:13, marginBottom:14 }}>
+              {locError}
+            </div>
+          )}
+
+          {/* Manual lat/lng inputs */}
+          <div className="form-row">
+            <div className="form-group">
+              <label>Latitude</label>
+              <input type="number" step="any" className="form-input" placeholder="e.g. 28.6139"
+                value={form.lat} onChange={e => set('lat', e.target.value)} disabled={saving} />
+            </div>
+            <div className="form-group">
+              <label>Longitude</label>
+              <input type="number" step="any" className="form-input" placeholder="e.g. 77.2090"
+                value={form.lng} onChange={e => set('lng', e.target.value)} disabled={saving} />
+            </div>
           </div>
-          <div className="form-group">
-            <label>Address</label>
-            <input type="text" className="form-input" value={form.address} onChange={e => set('address', e.target.value)} disabled={saving} />
-          </div>
+
+          {/* Map preview when coords are set */}
+          {form.lat && form.lng && (
+            <a
+              href={`https://www.google.com/maps?q=${form.lat},${form.lng}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:13, color:'#0ea5e9', textDecoration:'none', fontWeight:600, marginTop:4 }}>
+              🗺️ Preview on Google Maps ↗
+            </a>
+          )}
         </div>
-        <div className="form-group">
-          <label>Shop Description</label>
-          <textarea className="form-input form-textarea" value={form.description} onChange={e => set('description', e.target.value)}
-            disabled={saving} style={{ minHeight: 80 }} />
-        </div>
-        <div className="form-group">
-          <label>Logo URL</label>
-          <input type="url" className="form-input" placeholder="https://…" value={form.logo}
-            onChange={e => set('logo', e.target.value)} disabled={saving} />
-        </div>
+
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}
-          style={{ opacity: saving ? 0.7 : 1, background: 'linear-gradient(135deg,#16a34a,#15803d)' }}>
-          {saving ? 'Saving…' : 'Save Settings'}
+          style={{ opacity: saving ? 0.7 : 1, background: 'linear-gradient(135deg,#16a34a,#15803d)', alignSelf: 'flex-start' }}>
+          {saving ? 'Saving…' : 'Save All Settings'}
         </button>
       </div>
     </div>
@@ -247,6 +392,15 @@ export default function VendorDashboard() {
   const router = useRouter();
   const [section, setSection] = useState<Section>('overview');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    fetch('/api/chat/unread').then(r => r.json()).then(d => setUnread(d.count ?? 0)).catch(() => {});
+    const t = setInterval(() => {
+      fetch('/api/chat/unread').then(r => r.json()).then(d => setUnread(d.count ?? 0)).catch(() => {});
+    }, 15000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'vendor')) {
@@ -274,8 +428,9 @@ export default function VendorDashboard() {
           {SECTIONS.map(s => (
             <button key={s.key}
               className={`dash-nav-item${section === s.key ? ' active' : ''}`}
-              onClick={() => { setSection(s.key); setMenuOpen(false); }}>
+              onClick={() => { setSection(s.key); setMenuOpen(false); if (s.key === 'messages') setUnread(0); }}>
               <span>{s.icon}</span> {s.label}
+              {s.key === 'messages' && unread > 0 && <span className="badge-count">{unread}</span>}
             </button>
           ))}
         </nav>
@@ -306,10 +461,19 @@ export default function VendorDashboard() {
           </div>
         </div>
 
-        {section === 'overview' && <OverviewSection vendorId={user._id} />}
-        {section === 'products' && <ProductManager />}
-        {section === 'leads'    && <LeadsSection />}
-        {section === 'profile'  && <ProfileSection />}
+        {section === 'overview'   && <OverviewSection vendorId={user._id} />}
+        {section === 'products'   && <ProductManager />}
+        {section === 'promotions' && <PromotionManager role="vendor" />}
+        {section === 'leads'      && <LeadsSection />}
+        {section === 'messages'   && (
+          <div>
+            <div className="dash-topbar" style={{ borderBottom: 'none', marginBottom: 16, paddingBottom: 0 }}>
+              <div><h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>💬 Messages</h2><p style={{ margin: '4px 0 0', color: 'var(--text-light)', fontSize: 14 }}>Chat with your customers.</p></div>
+            </div>
+            <ChatInbox />
+          </div>
+        )}
+        {section === 'profile'    && <ProfileSection />}
       </main>
     </div>
   );

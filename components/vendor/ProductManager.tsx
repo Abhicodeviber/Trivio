@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import MultiFileUpload from '@/components/ui/MultiFileUpload';
 
 const PRODUCT_CATEGORIES = [
   'Vegetables', 'Fruits', 'Dairy & Eggs', 'Meat & Fish',
@@ -20,12 +21,12 @@ interface Product {
 
 interface FormState {
   title: string; description: string; category: string; price: string;
-  unit: string; images: string; tags: string; inStock: boolean;
+  unit: string; images: string[]; tags: string; inStock: boolean;
 }
 
 const EMPTY_FORM: FormState = {
   title: '', description: '', category: '', price: '', unit: 'piece',
-  images: '', tags: '', inStock: true,
+  images: [], tags: '', inStock: true,
 };
 
 export default function ProductManager() {
@@ -76,7 +77,7 @@ export default function ProductManager() {
       category:    p.category,
       price:       String(p.price),
       unit:        p.unit,
-      images:      p.images.join(', '),
+      images:      p.images,
       tags:        p.tags.join(', '),
       inStock:     p.inStock,
     });
@@ -85,7 +86,7 @@ export default function ProductManager() {
 
   function closeForm() { setShowForm(false); setEditing(null); setForm(EMPTY_FORM); }
 
-  const set = (k: keyof FormState, v: string | boolean) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k: keyof FormState, v: string | boolean | string[]) => setForm(f => ({ ...f, [k]: v }));
 
   async function handleSave() {
     if (!form.title.trim()) return notify('err', 'Title is required');
@@ -97,7 +98,7 @@ export default function ProductManager() {
       category:    form.category,
       price:       parseFloat(form.price),
       unit:        form.unit,
-      images:      form.images ? form.images.split(',').map(s => s.trim()).filter(Boolean) : [],
+      images:      form.images,
       tags:        form.tags   ? form.tags.split(',').map(s => s.trim()).filter(Boolean) : [],
       inStock:     form.inStock,
     };
@@ -200,11 +201,12 @@ export default function ProductManager() {
             </div>
           </div>
 
-          <div className="form-group">
-            <label>Image URLs <span style={{ color: '#6b7280', fontWeight: 400 }}>(comma-separated)</span></label>
-            <input type="text" className="form-input" placeholder="https://... , https://..." value={form.images}
-              onChange={e => set('images', e.target.value)} disabled={saving} />
-          </div>
+          <MultiFileUpload
+            label="Product Images"
+            values={form.images}
+            onChange={urls => set('images', urls)}
+            max={6}
+          />
 
           <div className="form-group">
             <label>Tags <span style={{ color: '#6b7280', fontWeight: 400 }}>(comma-separated)</span></label>

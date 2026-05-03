@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import ChatInbox from '@/components/chat/ChatInbox';
 
 const SECTIONS = ['home','search','bookings','saved','messages','settings'] as const;
 type Section = typeof SECTIONS[number];
@@ -9,8 +10,17 @@ type Section = typeof SECTIONS[number];
 export default function CustomerDashboard() {
   const [active, setActive] = useState<Section>('home');
   const { user, logout } = useAuth();
+  const [unread, setUnread] = useState(0);
   const initials = user?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) ?? 'CU';
   const firstName = user?.name?.split(' ')[0] ?? 'Customer';
+
+  useEffect(() => {
+    fetch('/api/chat/unread').then(r => r.json()).then(d => setUnread(d.count ?? 0)).catch(() => {});
+    const t = setInterval(() => {
+      fetch('/api/chat/unread').then(r => r.json()).then(d => setUnread(d.count ?? 0)).catch(() => {});
+    }, 15000);
+    return () => clearInterval(t);
+  }, []);
 
   return (
     <div className="dashboard-layout">
@@ -18,8 +28,8 @@ export default function CustomerDashboard() {
         <div className="dash-brand"><div className="logo-icon">S</div><span>ServeHub</span></div>
         <nav className="dash-nav">
           {[['home','🏠 Dashboard'],['search','🔍 Find Services'],['bookings','📋 My Bookings'],['saved','🤍 Saved Providers'],['messages','💬 Messages'],['settings','⚙️ Settings']].map(([id, label]) => (
-            <button key={id} className={`dash-nav-item${active === id ? ' active' : ''}`} onClick={() => setActive(id as Section)}>
-              {label}{id === 'messages' && <span className="badge-count">3</span>}
+            <button key={id} className={`dash-nav-item${active === id ? ' active' : ''}`} onClick={() => { setActive(id as Section); if (id === 'messages') setUnread(0); }}>
+              {label}{id === 'messages' && unread > 0 && <span className="badge-count">{unread}</span>}
             </button>
           ))}
         </nav>
@@ -97,11 +107,17 @@ export default function CustomerDashboard() {
             </div>
           </>
         )}
-        {(active === 'search' || active === 'saved' || active === 'messages') && (
+        {(active === 'search' || active === 'saved') && (
           <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'80px 24px',textAlign:'center'}}>
-            <div style={{fontSize:56,marginBottom:16}}>{active === 'search' ? '🔍' : active === 'saved' ? '🤍' : '💬'}</div>
-            <h3 style={{fontSize:20,fontWeight:700,color:'var(--dark)',marginBottom:8}}>{active === 'search' ? 'Find Services' : active === 'saved' ? 'Saved Providers' : 'Messages'}</h3>
+            <div style={{fontSize:56,marginBottom:16}}>{active === 'search' ? '🔍' : '🤍'}</div>
+            <h3 style={{fontSize:20,fontWeight:700,color:'var(--dark)',marginBottom:8}}>{active === 'search' ? 'Find Services' : 'Saved Providers'}</h3>
             {active === 'search' && <Link href="/browse"><button className="btn btn-primary" style={{marginTop:16}}>Open Browse</button></Link>}
+          </div>
+        )}
+        {active === 'messages' && (
+          <div>
+            <div className="dash-topbar"><div><h2>💬 Messages</h2><p>Chat with shops and service providers.</p></div></div>
+            <ChatInbox />
           </div>
         )}
       </main>

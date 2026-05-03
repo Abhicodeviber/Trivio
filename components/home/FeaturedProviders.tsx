@@ -1,17 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useTiltCards } from '@/hooks/useTiltCards';
 
-const COVERS = [
-  'linear-gradient(135deg,#667eea,#764ba2)',
-  'linear-gradient(135deg,#f093fb,#f5576c)',
-  'linear-gradient(135deg,#4facfe,#00f2fe)',
-  'linear-gradient(135deg,#43e97b,#38f9d7)',
-  'linear-gradient(135deg,#fa709a,#fee140)',
-  'linear-gradient(135deg,#a18cd1,#fbc2eb)',
+const COVER_COLORS = [
+  { from: '#6366f1', to: '#818cf8' },
+  { from: '#ec4899', to: '#f472b6' },
+  { from: '#0ea5e9', to: '#38bdf8' },
+  { from: '#10b981', to: '#34d399' },
+  { from: '#f59e0b', to: '#fbbf24' },
+  { from: '#8b5cf6', to: '#a78bfa' },
 ];
-const COLORS = ['#6366f1','#ec4899','#0ea5e9','#10b981','#f59e0b','#8b5cf6'];
 
 interface Service {
   _id: string;
@@ -25,93 +23,152 @@ interface Service {
   provider: { _id: string; name: string; location?: string };
 }
 
+function StarRating({ rating }: { rating: number }) {
+  const full  = Math.floor(rating);
+  const half  = rating % 1 >= 0.5;
+  const empty = 5 - full - (half ? 1 : 0);
+  return (
+    <span className="fp-stars">
+      {'★'.repeat(full)}
+      {half ? '½' : ''}
+      {'☆'.repeat(empty)}
+    </span>
+  );
+}
+
+function ServiceCard({ s, i }: { s: Service; i: number }) {
+  const initials   = s.provider?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'PR';
+  const col        = COVER_COLORS[i % COVER_COLORS.length];
+  const priceLabel = s.priceType === 'hourly' ? '/hr' : s.priceType === 'daily' ? '/day' : '';
+
+  return (
+    <Link href={`/services/${s._id}`} className="fp-card-link">
+      <div className="fp-card" style={{ animationDelay: `${i * 0.07}s` }}>
+
+        {/* Coloured cover */}
+        <div className="fp-cover" style={{ background: `linear-gradient(135deg,${col.from},${col.to})` }}>
+          <span className="fp-cover-icon">{s.category?.icon ?? '🛠️'}</span>
+          <div className="fp-cover-glow" style={{ background: col.to }} />
+
+          {/* Category badge */}
+          <div className="fp-cat-badge" style={{ background: `${col.from}33`, color: '#fff', border: `1px solid ${col.to}66` }}>
+            {s.category?.name ?? 'Service'}
+          </div>
+        </div>
+
+        {/* Provider avatar */}
+        <div className="fp-avatar-wrap">
+          <div className="fp-avatar" style={{ background: `linear-gradient(135deg,${col.from},${col.to})` }}>
+            {initials}
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="fp-body">
+          <h3 className="fp-title">{s.title}</h3>
+          <p className="fp-provider">
+            {s.provider?.name}
+            {s.provider?.location && <span className="fp-location"> · 📍 {s.provider.location}</span>}
+          </p>
+
+          {/* Rating row */}
+          <div className="fp-rating-row">
+            {s.rating > 0 ? (
+              <>
+                <StarRating rating={s.rating} />
+                <span className="fp-rating-num">{s.rating.toFixed(1)}</span>
+                <span className="fp-review-count">({s.reviewCount})</span>
+              </>
+            ) : (
+              <span className="fp-new-badge">✨ New</span>
+            )}
+          </div>
+
+          {/* Tags */}
+          {s.tags?.length > 0 && (
+            <div className="fp-tags">
+              {s.tags.slice(0, 3).map(t => <span key={t} className="fp-tag">{t}</span>)}
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="fp-footer">
+            <div className="fp-price">
+              <span className="fp-from">from</span>
+              <strong>₹{s.price}</strong>
+              {priceLabel && <span className="fp-unit">{priceLabel}</span>}
+            </div>
+            <span className="fp-cta" style={{ background: `linear-gradient(135deg,${col.from},${col.to})` }}>
+              View →
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </Link>
+  );
+}
+
 export default function FeaturedProviders() {
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useTiltCards('.tilt-card');
-
-  const [fetchError, setFetchError] = useState(false);
+  const [services,  setServices]  = useState<Service[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [fetchError,setFetchError]= useState(false);
 
   useEffect(() => {
     fetch('/api/services?limit=6&sort=rating')
       .then(r => { if (!r.ok) throw new Error(); return r.json(); })
-      .then(data => setServices(data.services ?? []))
+      .then(d => setServices(d.services ?? []))
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   }, []);
 
   return (
-    <section className="section">
+    <section className="fp-section">
       <div className="container">
-        <div className="section-header reveal" style={{ flexDirection: 'row', justifyContent: 'space-between', textAlign: 'left' }}>
-          <div><h2>Featured Services</h2><p style={{ color: 'var(--text-light)' }}>Handpicked top-rated services</p></div>
-          <Link href="/browse"><button className="btn btn-ghost">View All →</button></Link>
+
+        {/* Header */}
+        <div className="fp-header reveal">
+          <div className="fp-header-left">
+            <span className="fp-section-badge">⚡ Top Picks</span>
+            <h2 className="fp-section-title">Featured Services</h2>
+            <p className="fp-section-sub">Handpicked top-rated professionals near you</p>
+          </div>
+          <Link href="/browse" className="fp-view-all">
+            Browse all services <span>→</span>
+          </Link>
         </div>
 
+        {/* Cards */}
         {loading ? (
-          <div className="providers-grid">
+          <div className="fp-grid">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="provider-card" style={{ opacity: 0.4 }}>
-                <div className="provider-cover" style={{ background: '#e2e8f0' }} />
-                <div className="provider-body">
-                  <div className="provider-avatar" style={{ background: '#cbd5e1' }} />
-                  <div style={{ height: 16, background: '#e2e8f0', borderRadius: 4, margin: '40px 0 8px' }} />
-                  <div style={{ height: 12, background: '#f1f5f9', borderRadius: 4, width: '60%' }} />
+              <div key={i} className="fp-card fp-skeleton">
+                <div className="fp-cover" style={{ background: '#e2e8f0' }} />
+                <div className="fp-body" style={{ paddingTop: 48 }}>
+                  <div style={{ height: 16, background: '#e2e8f0', borderRadius: 6, marginBottom: 8, width: '70%' }} />
+                  <div style={{ height: 12, background: '#f1f5f9', borderRadius: 6, width: '50%' }} />
                 </div>
               </div>
             ))}
           </div>
         ) : fetchError ? (
-          <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-light)', fontSize: 14 }}>
-            ⚠️ Could not load services right now. <a href="/browse" style={{ color: 'var(--primary)' }}>Browse all services →</a>
+          <div className="fp-empty">
+            ⚠️ Could not load services.{' '}
+            <Link href="/browse" style={{ color: 'var(--primary)' }}>Browse all →</Link>
           </div>
         ) : services.length === 0 ? (
-          <div className="content-card" style={{ textAlign: 'center', padding: '60px 24px' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🛠️</div>
-            <h3 style={{ marginBottom: 8 }}>No services yet</h3>
-            <p style={{ color: 'var(--text-light)' }}>Providers haven't added services yet. Check back soon!</p>
-            <Link href="/signup">
-              <button className="btn btn-primary" style={{ marginTop: 16 }}>Become a Provider</button>
-            </Link>
+          <div className="fp-empty-state">
+            <div style={{ fontSize: 52, marginBottom: 12 }}>🛠️</div>
+            <h3>No services yet</h3>
+            <p>Providers haven&apos;t added services yet. Check back soon!</p>
+            <Link href="/signup"><button className="btn btn-primary" style={{ marginTop: 16 }}>Become a Provider</button></Link>
           </div>
         ) : (
-          <div className="providers-grid">
-            {services.map((s, i) => {
-              const initials = s.provider?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? 'PR';
-              return (
-                <Link key={s._id} href={`/services/${s._id}`} style={{ textDecoration: 'none' }}>
-                  <div
-                    className="provider-card tilt-card"
-                    style={{ animation: `fadeInUp 0.4s ease both`, animationDelay: `${i * 0.1}s` }}
-                  >
-                    <div className="provider-cover" style={{ background: COVERS[i % COVERS.length] }}>
-                      <span style={{ fontSize: 32, position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}>
-                        {s.category?.icon ?? '🛠️'}
-                      </span>
-                    </div>
-                    <div className="provider-body">
-                      <div className="provider-avatar" style={{ background: COLORS[i % COLORS.length] }}>{initials}</div>
-                      <div className="provider-badge">{s.category?.name ?? 'Service'}</div>
-                      <h3 style={{ fontSize: 15, lineHeight: 1.3 }}>{s.title}</h3>
-                      <p className="provider-title">{s.provider?.name}{s.provider?.location ? ` · ${s.provider.location}` : ''}</p>
-                      <div className="provider-rating">
-                        ⭐ {s.rating > 0 ? s.rating.toFixed(1) : 'New'} <span>({s.reviewCount} reviews)</span>
-                      </div>
-                      <div className="provider-tags">
-                        {(s.tags ?? []).slice(0, 3).map(t => <span key={t} className="ptag">{t}</span>)}
-                      </div>
-                      <div className="provider-footer">
-                        <span className="price">From ${s.price}/{s.priceType === 'hourly' ? 'hr' : s.priceType === 'negotiable' ? 'neg.' : 'fixed'}</span>
-                        <button className="btn btn-sm btn-primary">View Details</button>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+          <div className="fp-grid">
+            {services.map((s, i) => <ServiceCard key={s._id} s={s} i={i} />)}
           </div>
         )}
+
       </div>
     </section>
   );

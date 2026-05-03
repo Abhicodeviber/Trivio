@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Navbar from '@/components/ui/Navbar';
 import Footer from '@/components/ui/Footer';
 import VideoEmbed from '@/components/ui/VideoEmbed';
+import ChatButton from '@/components/chat/ChatButton';
 
 interface FieldDef {
   name: string;
@@ -488,6 +489,13 @@ export default function ServiceDetailPage() {
                   {!service.mobile && !service.whatsapp && (
                     <p style={{ textAlign: 'center', color: 'var(--text-light)', fontSize: 13 }}>No contact info available</p>
                   )}
+                  <ChatButton
+                    targetUserId={service.provider._id}
+                    targetRole="provider"
+                    targetName={service.provider.name}
+                    className="btn btn-full"
+                    style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', border: 'none', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}
+                  />
                 </div>
               )}
             </div>

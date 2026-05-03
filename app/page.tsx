@@ -7,6 +7,7 @@ import Categories from '@/components/home/Categories';
 import HowItWorks from '@/components/home/HowItWorks';
 import FeaturedProviders from '@/components/home/FeaturedProviders';
 import FeaturedVendors from '@/components/home/FeaturedVendors';
+import VendorSection from '@/components/home/VendorSection';
 import PromoSlider from '@/components/home/PromoSlider';
 import CtaSection from '@/components/home/CtaSection';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
@@ -26,11 +27,12 @@ export default function HomePage() {
       <main>
         <Hero />
         <TrustStrip />
+        <VendorSection />
         <Categories />
         <PromoSlider />
+        <FeaturedVendors />
         <HowItWorks />
         <FeaturedProviders />
-        <FeaturedVendors />
         <CtaSection />
       </main>
       <Footer />

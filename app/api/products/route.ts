@@ -17,6 +17,9 @@ export async function GET(req: NextRequest) {
     const maxPrice = searchParams.get('maxPrice');
     const inStock  = searchParams.get('inStock');
     const vendorId = searchParams.get('vendorId');
+    const nearLat  = searchParams.get('nearLat');
+    const nearLng  = searchParams.get('nearLng');
+    const radius   = parseFloat(searchParams.get('radius') ?? '10'); // km
     const sort     = searchParams.get('sort') ?? 'createdAt';
 
     const filter: Record<string, unknown> = {};
@@ -31,6 +34,24 @@ export async function GET(req: NextRequest) {
     if (inStock === 'true')  filter.inStock = true;
     if (inStock === 'false') filter.inStock = false;
 
+    // Nearby: find vendor IDs within radius, then filter products by those vendors
+    if (nearLat && nearLng && !vendorId) {
+      const nearbyVendors = await Vendor.find({
+        isActive: true, isApproved: true,
+        location: {
+          $nearSphere: {
+            $geometry: { type: 'Point', coordinates: [parseFloat(nearLng), parseFloat(nearLat)] },
+            $maxDistance: radius * 1000,
+          },
+        },
+      }).select('_id').lean();
+
+      if (nearbyVendors.length === 0) {
+        return NextResponse.json({ products: [], total: 0, page: 1, pages: 0 });
+      }
+      filter.vendor = { $in: nearbyVendors.map(v => v._id) };
+    }
+
     const sortMap: Record<string, Record<string, SortOrder>> = {
       price_asc:  { price: 1 },
       price_desc: { price: -1 },
@@ -39,7 +60,7 @@ export async function GET(req: NextRequest) {
 
     const [products, total] = await Promise.all([
       Product.find(filter)
-        .populate('vendor', 'shopName ownerName city logo rating reviewCount')
+        .populate('vendor', 'shopName ownerName city logo rating reviewCount location')
         .select('-mobile -whatsapp')
         .sort(sortMap[sort] ?? { createdAt: -1 })
         .skip((page - 1) * limit)

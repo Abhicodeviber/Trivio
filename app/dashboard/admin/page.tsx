@@ -2,8 +2,10 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import CategoryManager from '@/components/admin/CategoryManager';
+import PromotionManager from '@/components/promotions/PromotionManager';
+import PlanManager from '@/components/plans/PlanManager';
 
-const SECTIONS = ['home','users','providers','services','categories','reports','settings'] as const;
+const SECTIONS = ['home','users','providers','services','categories','plans','promotions','reports','settings'] as const;
 type Section = typeof SECTIONS[number];
 
 export default function AdminDashboard() {
@@ -16,7 +18,7 @@ export default function AdminDashboard() {
       <aside className="dash-sidebar" style={{ background: 'linear-gradient(180deg,#0f172a,#1e293b)' }}>
         <div className="dash-brand"><div className="logo-icon" style={{background:'#ef4444'}}>S</div><span>Admin</span></div>
         <nav className="dash-nav">
-          {[['home','📊 Overview'],['users','👥 Users'],['providers','🛠️ Providers'],['services','📋 Services'],['categories','📂 Categories'],['reports','📈 Analytics'],['settings','⚙️ Settings']].map(([id,label]) => (
+          {[['home','📊 Overview'],['users','👥 Users'],['providers','🛠️ Providers'],['services','📋 Services'],['categories','📂 Categories'],['plans','💎 Plans'],['promotions','🎯 Promotions'],['reports','📈 Analytics'],['settings','⚙️ Settings']].map(([id,label]) => (
             <button key={id} className={`dash-nav-item${active===id?' active':''}`} onClick={() => setActive(id as Section)}>
               {label}
             </button>
@@ -86,7 +88,9 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {active === 'categories' && <CategoryManager />}
+        {active === 'categories'  && <CategoryManager />}
+        {active === 'plans'       && <PlanManager />}
+        {active === 'promotions'  && <PromotionManager role="admin" />}
 
         {(active === 'providers' || active === 'services') && (
           <div className="content-card">

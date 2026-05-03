@@ -11,6 +11,9 @@ export async function GET(req: NextRequest) {
     const search   = searchParams.get('search');
     const city     = searchParams.get('city');
     const category = searchParams.get('category');
+    const nearLat  = searchParams.get('nearLat');
+    const nearLng  = searchParams.get('nearLng');
+    const radius   = parseFloat(searchParams.get('radius') ?? '10'); // km
 
     const filter: Record<string, unknown> = { isActive: true, isApproved: true };
     if (search) {
@@ -22,8 +25,18 @@ export async function GET(req: NextRequest) {
     if (city)     filter.city       = { $regex: city, $options: 'i' };
     if (category) filter.categories = category;
 
+    // Nearby filter — requires vendors to have location set
+    if (nearLat && nearLng) {
+      filter.location = {
+        $nearSphere: {
+          $geometry: { type: 'Point', coordinates: [parseFloat(nearLng), parseFloat(nearLat)] },
+          $maxDistance: radius * 1000, // metres
+        },
+      };
+    }
+
     const [vendors, total] = await Promise.all([
-      Vendor.find(filter).select('-password').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+      Vendor.find(filter).select('-password').sort(nearLat ? {} : { createdAt: -1 }).skip((page - 1) * limit).limit(limit),
       Vendor.countDocuments(filter),
     ]);
 

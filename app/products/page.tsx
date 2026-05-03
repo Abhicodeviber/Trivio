@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-interface Vendor { _id: string; shopName: string; city: string; logo?: string; rating: number; }
+interface Vendor { _id: string; shopName: string; city: string; logo?: string; rating: number; location?: { coordinates: [number, number] }; }
 interface Product {
   _id: string; title: string; description: string; category: string;
   price: number; unit: string; images: string[]; tags: string[];
@@ -28,7 +28,16 @@ const GRADIENTS = [
   'linear-gradient(135deg,#a1c4fd,#c2e9fb)',
 ];
 
-export default function ProductsPage() {
+/* ── Haversine distance in km ── */
+function haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function ProductsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -38,6 +47,12 @@ export default function ProductsPage() {
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
 
+  // Near Me state
+  const [userLat,     setUserLat]     = useState<number | null>(null);
+  const [userLng,     setUserLng]     = useState<number | null>(null);
+  const [gettingLoc,  setGettingLoc]  = useState(false);
+  const [locErr,      setLocErr]      = useState('');
+
   const search   = searchParams.get('search') ?? '';
   const category = searchParams.get('category') ?? '';
   const minPrice = searchParams.get('minPrice') ?? '';
@@ -45,6 +60,13 @@ export default function ProductsPage() {
   const inStock  = searchParams.get('inStock')  ?? '';
   const sort     = searchParams.get('sort')     ?? 'createdAt';
   const page     = parseInt(searchParams.get('page') ?? '1');
+  const nearLat  = searchParams.get('nearLat')  ?? '';
+  const nearLng  = searchParams.get('nearLng')  ?? '';
+
+  // Restore user coords from URL on mount
+  useEffect(() => {
+    if (nearLat && nearLng) { setUserLat(parseFloat(nearLat)); setUserLng(parseFloat(nearLng)); }
+  }, [nearLat, nearLng]);
 
   const [searchInput, setSearchInput]   = useState(search);
   const [maxPriceInput, setMaxPriceInput] = useState(maxPrice);
@@ -66,6 +88,8 @@ export default function ProductsPage() {
     if (minPrice) params.set('minPrice', minPrice);
     if (maxPrice) params.set('maxPrice', maxPrice);
     if (inStock)  params.set('inStock',  inStock);
+    if (nearLat)  params.set('nearLat',  nearLat);
+    if (nearLng)  params.set('nearLng',  nearLng);
     params.set('sort',  sort);
     params.set('page',  String(page));
     params.set('limit', '12');
@@ -81,7 +105,7 @@ export default function ProductsPage() {
       })
       .catch(() => setError('Could not load products. Please try again.'))
       .finally(() => setLoading(false));
-  }, [search, category, minPrice, maxPrice, inStock, sort, page]);
+  }, [search, category, minPrice, maxPrice, inStock, nearLat, nearLng, sort, page]);
 
   function handleSearchChange(val: string) {
     setSearchInput(val);
@@ -95,14 +119,44 @@ export default function ProductsPage() {
     debounceRef.current = setTimeout(() => pushParams({ maxPrice: val }), 500);
   }
 
+  function handleNearMe() {
+    if (!navigator.geolocation) { setLocErr('Geolocation not supported.'); return; }
+    setGettingLoc(true);
+    setLocErr('');
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setUserLat(lat); setUserLng(lng);
+        setGettingLoc(false);
+        pushParams({ nearLat: String(lat), nearLng: String(lng) });
+      },
+      err => {
+        setLocErr(err.code === 1 ? 'Location permission denied.' : 'Could not get location.');
+        setGettingLoc(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  function clearNearMe() {
+    setUserLat(null); setUserLng(null); setLocErr('');
+    pushParams({ nearLat: '', nearLng: '' });
+  }
+
   const activeFilters = [
     search   && { key: 'search',   label: `"${search}"` },
     category && { key: 'category', label: category },
     maxPrice && { key: 'maxPrice', label: `≤ ₹${maxPrice}` },
     inStock === 'true' && { key: 'inStock', label: 'In Stock' },
+    nearLat && nearLng && { key: 'near', label: '📍 Near Me' },
   ].filter(Boolean) as { key: string; label: string }[];
 
-  function clearAll() { router.push('/products'); setSearchInput(''); setMaxPriceInput(''); }
+  function clearAll() {
+    router.push('/products');
+    setSearchInput(''); setMaxPriceInput('');
+    setUserLat(null); setUserLng(null);
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -143,7 +197,22 @@ export default function ProductsPage() {
             <option value="price_asc">Price: Low → High</option>
             <option value="price_desc">Price: High → Low</option>
           </select>
+          {/* Near Me button */}
+          {nearLat && nearLng ? (
+            <button onClick={clearNearMe}
+              style={{ display:'flex', alignItems:'center', gap:5, background:'#dcfce7', color:'#15803d', border:'1.5px solid #86efac', borderRadius:8, padding:'7px 14px', fontSize:13, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+              📍 Near Me ×
+            </button>
+          ) : (
+            <button onClick={handleNearMe} disabled={gettingLoc}
+              style={{ display:'flex', alignItems:'center', gap:5, background: gettingLoc ? '#f1f5f9' : 'linear-gradient(135deg,#0ea5e9,#0284c7)', color: gettingLoc ? '#94a3b8' : '#fff', border:'none', borderRadius:8, padding:'7px 14px', fontSize:13, fontWeight:700, cursor: gettingLoc ? 'not-allowed' : 'pointer', whiteSpace:'nowrap', flexShrink:0 }}>
+              {gettingLoc
+                ? <><span style={{ display:'inline-block', width:12, height:12, border:'2px solid #cbd5e1', borderTopColor:'#64748b', borderRadius:'50%', animation:'spin .7s linear infinite' }} /> Locating…</>
+                : '📍 Near Me'}
+            </button>
+          )}
         </div>
+        {locErr && <div style={{ background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:8, padding:'8px 14px', color:'#dc2626', fontSize:13, marginTop:-12, marginBottom:8 }}>{locErr}</div>}
 
         {/* Active filter chips */}
         {activeFilters.length > 0 && (
@@ -151,7 +220,12 @@ export default function ProductsPage() {
             <span style={{ fontSize: 13, color: 'var(--text-light)' }}>Filters:</span>
             {activeFilters.map(f => (
               <span key={f.key} className="ptag" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-                onClick={() => { pushParams({ [f.key]: '' }); if (f.key === 'search') setSearchInput(''); if (f.key === 'maxPrice') setMaxPriceInput(''); }}>
+                onClick={() => {
+                  if (f.key === 'near') { clearNearMe(); return; }
+                  pushParams({ [f.key]: '' });
+                  if (f.key === 'search') setSearchInput('');
+                  if (f.key === 'maxPrice') setMaxPriceInput('');
+                }}>
                 {f.label} ×
               </span>
             ))}
@@ -215,6 +289,11 @@ export default function ProductsPage() {
                         {p.vendor?.shopName ?? 'Unknown Shop'}
                       </span>
                       {p.vendor?.city && <span style={{ fontSize: 11, color: 'var(--text-light)', marginLeft: 'auto', flexShrink: 0 }}>📍 {p.vendor.city}</span>}
+                      {userLat && userLng && p.vendor?.location?.coordinates && (() => {
+                        const [vLng, vLat] = p.vendor.location.coordinates;
+                        const km = haversine(userLat, userLng, vLat, vLng);
+                        return <span style={{ fontSize: 10, background: '#dcfce7', color: '#15803d', padding: '1px 6px', borderRadius: 20, fontWeight: 700, flexShrink: 0 }}>{km < 1 ? `${Math.round(km*1000)}m` : `${km.toFixed(1)}km`}</span>;
+                      })()}
                     </div>
                     <div className="sc-title">{p.title}</div>
                     {p.category && <span className="ptag" style={{ fontSize: 11, marginBottom: 6, display: 'inline-block' }}>{p.category}</span>}
@@ -271,5 +350,13 @@ export default function ProductsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>Loading…</div>}>
+      <ProductsContent />
+    </Suspense>
   );
 }

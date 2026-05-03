@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/ui/Navbar';
@@ -60,7 +60,7 @@ function ServiceCard({ svc, idx }: { svc: Service; idx: number }) {
   );
 }
 
-export default function BrowsePage() {
+function BrowseContent() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
@@ -357,5 +357,13 @@ export default function BrowsePage() {
       </div>
       <Footer />
     </>
+  );
+}
+
+export default function BrowsePage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280' }}>Loading…</div>}>
+      <BrowseContent />
+    </Suspense>
   );
 }

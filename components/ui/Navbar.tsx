@@ -1,17 +1,19 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 
 export default function Navbar() {
-  const [scrolled, setScrolled]   = useState(false);
-  const [menuOpen, setMenuOpen]   = useState(false);
-  const [dropOpen, setDropOpen]   = useState(false);
+  const [scrolled,  setScrolled]  = useState(false);
+  const [menuOpen,  setMenuOpen]  = useState(false);
+  const [dropOpen,  setDropOpen]  = useState(false);
   const { user, logout }          = useAuth();
   const dropRef                   = useRef<HTMLDivElement>(null);
+  const pathname                  = usePathname();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 30);
+    const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
@@ -24,6 +26,8 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
+
   const dashboardHref =
     user?.role === 'admin'    ? '/dashboard/admin'    :
     user?.role === 'provider' ? '/dashboard/provider' :
@@ -34,77 +38,114 @@ export default function Navbar() {
   const displayName = u?.shopName ?? user?.name ?? '';
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || '?';
 
-  const mobileMenuStyle = menuOpen
-    ? { display: 'flex', flexDirection: 'column' as const, position: 'absolute' as const, top: 64, left: 0, right: 0, background: 'white', padding: '16px 24px', borderBottom: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,.08)', zIndex: 99 }
-    : {};
+  const navLinks = [
+    { href: '/',         label: 'Home' },
+    { href: '/browse',   label: 'Services' },
+    { href: '/products', label: 'Products' },
+    ...(user ? [{ href: dashboardHref, label: 'Dashboard' }] : []),
+  ];
 
   return (
-    <nav className={`navbar${scrolled ? ' scrolled' : ''}`}>
+    <nav className={`navbar${scrolled ? ' navbar-scrolled' : ''}`}>
       <div className="nav-container">
+
+        {/* Logo */}
         <Link href="/" className="nav-logo" style={{ textDecoration: 'none' }}>
           <div className="logo-icon">S</div>
           <span className="logo-text">ServeHub</span>
         </Link>
 
-        <div className="nav-links" style={mobileMenuStyle}>
-          <Link href="/" className="nav-link">Home</Link>
-          <Link href="/browse" className="nav-link">Services</Link>
-          <Link href="/products" className="nav-link">Products</Link>
-          {user && <Link href={dashboardHref} className="nav-link">Dashboard</Link>}
+        {/* Desktop links */}
+        <div className="nav-links">
+          {navLinks.map(l => (
+            <Link key={l.href} href={l.href}
+              className={`nav-link${pathname === l.href ? ' nav-link-active' : ''}`}>
+              {l.label}
+            </Link>
+          ))}
         </div>
 
+        {/* Actions */}
         <div className="nav-actions">
           {user ? (
             <div ref={dropRef} style={{ position: 'relative' }}>
-              <button
-                onClick={() => setDropOpen(p => !p)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: '1.5px solid var(--border)', borderRadius: 24, padding: '5px 12px 5px 6px', cursor: 'pointer', transition: 'all .2s' }}
-              >
-                <div style={{ width: 30, height: 30, borderRadius: '50%', background: user.role === 'vendor' ? 'linear-gradient(135deg,#16a34a,#15803d)' : 'linear-gradient(135deg,var(--primary),var(--secondary))', display: 'grid', placeItems: 'center', color: 'white', fontWeight: 700, fontSize: 12, flexShrink: 0 }}>
+              <button className="nav-user-btn" onClick={() => setDropOpen(p => !p)}>
+                <div className="nav-user-av" style={{
+                  background: user.role === 'vendor'
+                    ? 'linear-gradient(135deg,#16a34a,#4ade80)'
+                    : 'linear-gradient(135deg,#6366f1,#818cf8)',
+                }}>
                   {initials}
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--dark)', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {displayName.split(' ')[0]}
-                </span>
-                <span style={{ fontSize: 10, color: 'var(--text-light)', marginLeft: -2 }}>▾</span>
+                <span className="nav-user-name">{displayName.split(' ')[0]}</span>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ opacity: .6, transition: 'transform .2s', transform: dropOpen ? 'rotate(180deg)' : 'none' }}>
+                  <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </button>
 
               {dropOpen && (
-                <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: 'white', border: '1.5px solid var(--border)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,.1)', minWidth: 190, overflow: 'hidden', zIndex: 200, animation: 'fadeInUp .15s ease' }}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--dark)' }}>{displayName}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-light)' }}>{user.email}</div>
-                    <div style={{ fontSize: 11, marginTop: 2, background: user.role === 'vendor' ? '#dcfce7' : 'var(--primary-light,#ede9fe)', color: user.role === 'vendor' ? '#166534' : 'var(--primary)', display: 'inline-block', padding: '1px 8px', borderRadius: 10, fontWeight: 600, textTransform: 'capitalize' }}>
-                      {user.role === 'vendor' ? '🏪 Vendor' : user.role}
+                <div className="nav-drop">
+                  <div className="nav-drop-head">
+                    <div className="nav-drop-av" style={{
+                      background: user.role === 'vendor'
+                        ? 'linear-gradient(135deg,#16a34a,#4ade80)'
+                        : 'linear-gradient(135deg,#6366f1,#818cf8)',
+                    }}>
+                      {initials}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>{displayName}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', marginTop: 1 }}>{user.email}</div>
+                      <div style={{ marginTop: 4, fontSize: 11, fontWeight: 600, display: 'inline-block', padding: '2px 8px', borderRadius: 10,
+                        background: user.role === 'vendor' ? 'rgba(74,222,128,.15)' : 'rgba(129,140,248,.15)',
+                        color:      user.role === 'vendor' ? '#4ade80' : '#818cf8' }}>
+                        {user.role === 'vendor' ? '🏪 Vendor' : user.role}
+                      </div>
                     </div>
                   </div>
-                  <Link href={dashboardHref} onClick={() => setDropOpen(false)}
-                    style={{ display: 'block', padding: '10px 16px', fontSize: 14, color: 'var(--text)', textDecoration: 'none' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                    📊 Dashboard
-                  </Link>
-                  <button onClick={() => { logout(); setDropOpen(false); }}
-                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 16px', fontSize: 14, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', borderTop: '1px solid var(--border)' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                    ↩ Logout
-                  </button>
+                  <div className="nav-drop-body">
+                    <Link href={dashboardHref} className="nav-drop-item" onClick={() => setDropOpen(false)}>
+                      <span>📊</span> Dashboard
+                    </Link>
+                    <button className="nav-drop-item nav-drop-logout" onClick={() => { logout(); setDropOpen(false); }}>
+                      <span>↩</span> Logout
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           ) : (
             <>
-              <Link href="/login"><button className="btn btn-ghost">Log In</button></Link>
-              <Link href="/signup"><button className="btn btn-primary">Get Started</button></Link>
+              <Link href="/login" className="nav-btn-ghost">Log In</Link>
+              <Link href="/signup" className="nav-btn-primary">Get Started</Link>
             </>
           )}
 
-          <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)}>
+          {/* Hamburger */}
+          <button className={`hamburger${menuOpen ? ' open' : ''}`} onClick={() => setMenuOpen(p => !p)} aria-label="Menu">
             <span /><span /><span />
           </button>
         </div>
       </div>
+
+      {/* Mobile menu */}
+      {menuOpen && (
+        <div className="nav-mobile">
+          {navLinks.map(l => (
+            <Link key={l.href} href={l.href}
+              className={`nav-mobile-link${pathname === l.href ? ' active' : ''}`}
+              onClick={() => setMenuOpen(false)}>
+              {l.label}
+            </Link>
+          ))}
+          {!user && (
+            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+              <Link href="/login" className="nav-btn-ghost" style={{ flex: 1, textAlign: 'center' }}>Log In</Link>
+              <Link href="/signup" className="nav-btn-primary" style={{ flex: 1, textAlign: 'center' }}>Get Started</Link>
+            </div>
+          )}
+        </div>
+      )}
     </nav>
   );
 }

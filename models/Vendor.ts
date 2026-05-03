@@ -12,11 +12,15 @@ export interface IVendor extends Document {
   address: string;
   description: string;
   logo: string;
+  photos: string[];
+  youtube: string;
+  instagram: string;
   categories: string[];
   isActive: boolean;
   isApproved: boolean;
   rating: number;
   reviewCount: number;
+  location?: { type: 'Point'; coordinates: [number, number] }; // [lng, lat]
   comparePassword(candidate: string): Promise<boolean>;
 }
 
@@ -31,12 +35,21 @@ const VendorSchema = new Schema<IVendor>({
   address:     { type: String, default: '', trim: true },
   description: { type: String, default: '', trim: true },
   logo:        { type: String, default: '' },
+  photos:      { type: [String], default: [] },
+  youtube:     { type: String, default: '', trim: true },
+  instagram:   { type: String, default: '', trim: true },
   categories:  { type: [String], default: [] },
   isActive:    { type: Boolean, default: true },
   isApproved:  { type: Boolean, default: true },
   rating:      { type: Number, default: 0 },
   reviewCount: { type: Number, default: 0 },
+  location: {
+    type:        { type: String, enum: ['Point'], default: 'Point' },
+    coordinates: { type: [Number] }, // [longitude, latitude]
+  },
 }, { timestamps: true });
+
+VendorSchema.index({ location: '2dsphere' }, { sparse: true });
 
 VendorSchema.pre('save', async function () {
   if (!this.isModified('password')) return;

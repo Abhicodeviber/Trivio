@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { SortOrder } from 'mongoose';
 import { connectDB } from '@/lib/mongodb';
 import Product from '@/models/Product';
 import Vendor from '@/models/Vendor';
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
     if (inStock === 'true')  filter.inStock = true;
     if (inStock === 'false') filter.inStock = false;
 
-    const sortMap: Record<string, Record<string, number>> = {
+    const sortMap: Record<string, Record<string, SortOrder>> = {
       price_asc:  { price: 1 },
       price_desc: { price: -1 },
       createdAt:  { createdAt: -1 },
